@@ -1,0 +1,62 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Rr]elease/
+[Rr]eleases/
+[Dd]ebug/
+[Dd]ebugPublic/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+artifacts/
+TestResults/
+
+# Rider, Visual Studio, and VS Code settings
+.idea/
+.vs/
+.vscode/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# Dotnet tooling
+project.fragment.lock.json
+project.lock.json
+
+# Coverage and profiling
+*.coverage
+*.coveragexml
+*.dotCover
+
+# Crash and dump files
+*.psess
+*.vsp
+*.vspx
+*.nps
+*.dmp
+mono_crash.*
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Miscellaneous
+Generated\ Files/
+Backup*/
+*.[Cc]ache
+*.swp
+*.tmp
+*.bak
+*.orig
