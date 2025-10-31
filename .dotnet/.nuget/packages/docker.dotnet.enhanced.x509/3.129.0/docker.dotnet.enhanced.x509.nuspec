@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Docker.DotNet.Enhanced.X509</id>
+    <version>3.129.0</version>
+    <authors>Docker.DotNet.X509</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>icon.png</icon>
+    <iconUrl>https://github.com/testcontainers/Docker.DotNet/raw/main/icon.png</iconUrl>
+    <description>Docker.DotNet.X509 is a library that allows you to use certificate authentication with a remote Docker engine programmatically in your .NET applications.</description>
+    <copyright>Copyright (c) .NET Foundation and Contributors; Andre Hofmeister</copyright>
+    <tags>Docker Container C# .NET</tags>
+    <repository type="git" url="https://github.com/testcontainers/Docker.DotNet/" commit="a4ac675c5c97e0d465775244aa33997b6dbb2e7d" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="Docker.DotNet.Enhanced" version="3.129.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net9.0">
+        <dependency id="Docker.DotNet.Enhanced" version="3.129.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Docker.DotNet.Enhanced" version="3.129.0" exclude="Build,Analyzers" />
+        <dependency id="BouncyCastle.Cryptography" version="2.5.1" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="Docker.DotNet.Enhanced" version="3.129.0" exclude="Build,Analyzers" />
+        <dependency id="BouncyCastle.Cryptography" version="2.5.1" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

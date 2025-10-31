@@ -1,0 +1,1 @@
+{"dnn.platform":[{"url":"https://github.com/advisories/GHSA-2374-6cvw-qmx6","severity":1,"versions":"(, 10.1.1)"},{"url":"https://github.com/advisories/GHSA-3m8r-w7xg-jqvw","severity":3,"versions":"(, 10.1.1)"}],"dotnetnuke.core":[{"url":"https://github.com/advisories/GHSA-hmvq-8p83-cq52","severity":1,"versions":"(, 10.1.1)"}]}
