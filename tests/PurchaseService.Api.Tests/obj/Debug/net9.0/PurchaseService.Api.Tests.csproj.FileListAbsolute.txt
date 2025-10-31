@@ -455,3 +455,4 @@
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/tests/PurchaseService.Api.Tests/obj/Debug/net9.0/PurchaseService.Api.Tests.pdb
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/tests/PurchaseService.Api.Tests/obj/Debug/net9.0/PurchaseService.Api.Tests.genruntimeconfig.cache
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/tests/PurchaseService.Api.Tests/obj/Debug/net9.0/ref/PurchaseService.Api.Tests.dll
+/Users/marceloschmitz/Documents/Projetos/wex/purchase-service/tests/PurchaseService.Api.Tests/obj/Debug/net9.0/PurchaseService.Api.Tests.sourcelink.json

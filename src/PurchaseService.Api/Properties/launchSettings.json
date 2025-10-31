@@ -18,6 +18,19 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "local-debug": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Database__ConnectionString": "Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres",
+        "TreasuryRates__BaseUrl": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange/",
+        "TreasuryRates__HttpTimeoutSeconds": "10",
+        "TreasuryRates__UserAgent": "purchase-service/1.0"
+      }
     }
   }
 }

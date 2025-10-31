@@ -32,3 +32,4 @@
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/src/PurchaseService.Api/obj/Debug/net9.0/PurchaseService.Api.pdb
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/src/PurchaseService.Api/obj/Debug/net9.0/PurchaseService.Api.genruntimeconfig.cache
 /Users/marceloschmitz/Documents/Projetos/wex/purchase-service/src/PurchaseService.Api/obj/Debug/net9.0/ref/PurchaseService.Api.dll
+/Users/marceloschmitz/Documents/Projetos/wex/purchase-service/src/PurchaseService.Api/obj/Debug/net9.0/PurchaseService.Api.sourcelink.json
