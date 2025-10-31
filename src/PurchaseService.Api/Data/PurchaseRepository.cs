@@ -11,7 +11,12 @@ public sealed class PurchaseRepository : IPurchaseRepository
         """;
 
     private const string GetByIdSql = """
-        SELECT id, description, transaction_date, amount_usd, created_at AS CreatedAt
+        SELECT
+            id AS Id,
+            description AS Description,
+            transaction_date AS TransactionDate,
+            amount_usd AS AmountUsd,
+            created_at AS CreatedAt
         FROM purchases
         WHERE id = @Id;
         """;
