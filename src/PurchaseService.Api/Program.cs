@@ -13,11 +13,9 @@ SqlMapper.RemoveTypeMap(typeof(DateOnly?));
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.ConfigureDatabaseConnection();
-
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
-builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection("Database"));
+builder.Services.ConfigureDatabaseOptions(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.Configure<TreasuryRatesOptions>(builder.Configuration.GetSection("TreasuryRates"));
 
 builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();

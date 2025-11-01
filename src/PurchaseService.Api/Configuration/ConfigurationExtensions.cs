@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace PurchaseService.Api.Configuration;
@@ -9,43 +11,59 @@ public static class ConfigurationExtensions
     private const string DevelopDatabaseUrlVariable = "DATABASE_URL_DEVELOP";
     private const string ProductionDatabaseUrlVariable = "DATABASE_URL_PRODUCTION";
 
-    public static void ConfigureDatabaseConnection(this WebApplicationBuilder builder)
+    public static IServiceCollection ConfigureDatabaseOptions(this IServiceCollection services, IConfiguration configuration, string environmentName)
     {
-        var connectionString = builder.Configuration["Database:ConnectionString"];
-
-        if (TryNormalizeConnectionString(connectionString, out var normalized))
+        services.Configure<DatabaseOptions>(options =>
         {
-            builder.Configuration["Database:ConnectionString"] = normalized;
-            return;
-        }
+            if (TryNormalizeConnectionString(configuration["Database:ConnectionString"], out var normalized))
+            {
+                options.ConnectionString = normalized;
+                return;
+            }
 
-        var candidate = GetEnvironmentSpecificDatabaseUrl(builder.Environment.EnvironmentName, builder.Configuration);
+            var candidate = GetEnvironmentSpecificDatabaseUrl(environmentName, configuration);
 
-        if (TryNormalizeConnectionString(candidate, out normalized))
-        {
-            builder.Configuration["Database:ConnectionString"] = normalized;
-        }
+            if (TryNormalizeConnectionString(candidate, out normalized))
+            {
+                options.ConnectionString = normalized;
+            }
+        });
+
+        return services;
     }
 
-    private static string? GetEnvironmentSpecificDatabaseUrl(string environmentName, ConfigurationManager configuration)
+    private static string? GetEnvironmentSpecificDatabaseUrl(string environmentName, IConfiguration configuration)
     {
-        var environmentSpecificVariable = environmentName switch
-        {
-            "Develop" => DevelopDatabaseUrlVariable,
-            "Production" => ProductionDatabaseUrlVariable,
-            _ => null
-        };
+        var variables = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(environmentSpecificVariable))
+        if (!string.IsNullOrWhiteSpace(environmentName))
         {
-            var environmentValue = configuration[environmentSpecificVariable];
-            if (!string.IsNullOrWhiteSpace(environmentValue))
+            var trimmed = environmentName.Trim();
+            variables.Add($"DATABASE_URL_{trimmed.ToUpperInvariant()}");
+
+            if (trimmed.Equals("Develop", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("Development", StringComparison.OrdinalIgnoreCase))
             {
-                return environmentValue;
+                variables.Add(DevelopDatabaseUrlVariable);
+                variables.Add("DATABASE_URL_DEVELOPMENT");
+            }
+            else if (trimmed.Equals("Production", StringComparison.OrdinalIgnoreCase))
+            {
+                variables.Add(ProductionDatabaseUrlVariable);
             }
         }
 
-        return configuration[SharedDatabaseUrlVariable];
+        variables.Add(SharedDatabaseUrlVariable);
+
+        foreach (var variable in variables)
+        {
+            var value = configuration[variable];
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static bool TryNormalizeConnectionString(string? value, out string normalized)
@@ -56,6 +74,8 @@ public static class ConfigurationExtensions
         {
             return false;
         }
+
+        value = value.Trim();
 
         normalized = value.Contains("://", StringComparison.Ordinal)
             ? ConvertDatabaseUrlToConnectionString(value)
