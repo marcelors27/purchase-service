@@ -42,7 +42,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     await initializer.EnsureSchemaAsync(logger, CancellationToken.None);
 }
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Local"))
 {
     app.MapOpenApi();
 }
