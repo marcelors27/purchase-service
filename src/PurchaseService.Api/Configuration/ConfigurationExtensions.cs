@@ -15,21 +15,31 @@ public static class ConfigurationExtensions
     {
         services.Configure<DatabaseOptions>(options =>
         {
-            if (TryNormalizeConnectionString(configuration["Database:ConnectionString"], out var normalized))
+            foreach (var candidate in GetConnectionStringCandidates(configuration, environmentName))
             {
-                options.ConnectionString = normalized;
-                return;
-            }
-
-            var candidate = GetEnvironmentSpecificDatabaseUrl(environmentName, configuration);
-
-            if (TryNormalizeConnectionString(candidate, out normalized))
-            {
-                options.ConnectionString = normalized;
+                if (TryNormalizeConnectionString(candidate, out var normalized))
+                {
+                    options.ConnectionString = normalized;
+                    return;
+                }
             }
         });
 
         return services;
+    }
+
+    private static IEnumerable<string?> GetConnectionStringCandidates(IConfiguration configuration, string environmentName)
+    {
+        yield return configuration["Database:ConnectionString"];
+        yield return configuration["ConnectionStrings:Default"];
+
+        if (!string.IsNullOrWhiteSpace(environmentName))
+        {
+            yield return configuration[$"Database:ConnectionString:{environmentName}"];
+            yield return configuration[$"ConnectionStrings:{environmentName}"];
+        }
+
+        yield return GetEnvironmentSpecificDatabaseUrl(environmentName, configuration);
     }
 
     private static string? GetEnvironmentSpecificDatabaseUrl(string environmentName, IConfiguration configuration)
