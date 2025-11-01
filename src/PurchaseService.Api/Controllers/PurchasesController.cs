@@ -1,10 +1,11 @@
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PurchaseService.Api.Application.Exceptions;
+using PurchaseService.Api.Application.Purchases;
 using PurchaseService.Api.Contracts;
-using PurchaseService.Api.Data;
-using PurchaseService.Api.Domain;
+using PurchaseService.Api.Mediator;
 using PurchaseService.Api.Services.Currency;
-using PurchaseService.Api.Validation;
 
 namespace PurchaseService.Api.Controllers;
 
@@ -12,13 +13,11 @@ namespace PurchaseService.Api.Controllers;
 [Route("purchases")]
 public sealed class PurchasesController : ControllerBase
 {
-    private readonly IPurchaseRepository _repository;
-    private readonly CurrencyConversionService _conversionService;
+    private readonly IMediator _mediator;
 
-    public PurchasesController(IPurchaseRepository repository, CurrencyConversionService conversionService)
+    public PurchasesController(IMediator mediator)
     {
-        _repository = repository;
-        _conversionService = conversionService;
+        _mediator = mediator;
     }
 
     [HttpPost]
@@ -26,22 +25,24 @@ public sealed class PurchasesController : ControllerBase
         [FromBody] CreatePurchaseRequest request,
         CancellationToken cancellationToken)
     {
-        var validationErrors = PurchaseRequestValidator.Validate(request);
-        if (validationErrors.Count > 0)
+        try
         {
-            return ValidationProblem(new ValidationProblemDetails(validationErrors));
+            var command = new CreatePurchaseCommand(
+                request.Description,
+                request.TransactionDate,
+                request.Amount);
+
+            var response = await _mediator.Send(command, cancellationToken);
+            return Created($"/purchases/{response.Id}", response);
         }
+        catch (RequestValidationException ex)
+        {
+            var errors = ex.Errors.ToDictionary(
+                static pair => pair.Key,
+                static pair => pair.Value);
 
-        var purchase = new Purchase(
-            Guid.NewGuid(),
-            request.Description.Trim(),
-            request.TransactionDate,
-            Math.Round(request.Amount, 2, MidpointRounding.AwayFromZero),
-            DateTimeOffset.UtcNow);
-
-        await _repository.CreateAsync(purchase, cancellationToken);
-
-        return Created($"/purchases/{purchase.Id}", PurchaseResponse.FromPurchase(purchase));
+            return ValidationProblem(new ValidationProblemDetails(errors));
+        }
     }
 
     [HttpGet("{id:guid}")]
@@ -50,20 +51,16 @@ public sealed class PurchasesController : ControllerBase
         [FromQuery] string currency,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(currency))
-        {
-            return BadRequest(new { error = "Currency query parameter is required." });
-        }
-
-        var purchase = await _repository.GetByIdAsync(id, cancellationToken);
-        if (purchase is null)
-        {
-            return NotFound();
-        }
-
         try
         {
-            var converted = await _conversionService.ConvertAsync(purchase, currency, cancellationToken);
+            var query = new GetPurchaseQuery(id, currency);
+            var converted = await _mediator.Send(query, cancellationToken);
+
+            if (converted is null)
+            {
+                return NotFound();
+            }
+
             return Ok(converted);
         }
         catch (CurrencyConversionException ex)
