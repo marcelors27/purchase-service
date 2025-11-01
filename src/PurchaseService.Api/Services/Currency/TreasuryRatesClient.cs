@@ -21,8 +21,7 @@ public sealed class TreasuryRatesClient : ITreasuryRatesClient
         DateOnly purchaseDate,
         CancellationToken cancellationToken)
     {
-        var normalizedCurrency = currencyCode.ToUpperInvariant();
-        var query = $"?fields=record_date,currency,exchange_rate&filter=currency:eq:{Uri.EscapeDataString(normalizedCurrency)},record_date:lte:{purchaseDate:yyyy-MM-dd}&sort=-record_date&limit=1";
+        var query = $"?fields=record_date,currency,exchange_rate&filter=currency:eq:{Uri.EscapeDataString(currencyCode)},record_date:lte:{purchaseDate:yyyy-MM-dd}&sort=-record_date&limit=1";
 
         using var response = await _httpClient.GetAsync(query, cancellationToken);
 
@@ -53,7 +52,7 @@ public sealed class TreasuryRatesClient : ITreasuryRatesClient
         }
 
         var first = dataElement[0];
-        if (!TryReadExchangeRate(first, normalizedCurrency, out var rateDetails))
+        if (!TryReadExchangeRate(first, currencyCode, out var rateDetails))
         {
             throw new CurrencyConversionException("Treasury API returned an unreadable exchange rate.");
         }

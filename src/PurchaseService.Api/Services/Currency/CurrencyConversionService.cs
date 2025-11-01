@@ -22,23 +22,21 @@ public sealed class CurrencyConversionService
             throw new CurrencyConversionException("Target currency is required.");
         }
 
-        var normalizedCurrency = currency.ToUpperInvariant();
-
         var exchangeRate = await _treasuryRatesClient.GetExchangeRateAsync(
-            normalizedCurrency,
+            currency,
             purchase.TransactionDate,
             cancellationToken);
 
         if (exchangeRate is null)
         {
             throw new CurrencyConversionException(
-                $"No exchange rate found for {normalizedCurrency} on or before {purchase.TransactionDate:yyyy-MM-dd}.");
+                $"No exchange rate found for {currency} on or before {purchase.TransactionDate:yyyy-MM-dd}.");
         }
 
         if (!IsWithinSixMonths(purchase.TransactionDate, exchangeRate.EffectiveDate))
         {
             throw new CurrencyConversionException(
-                $"No exchange rate within six months prior to {purchase.TransactionDate:yyyy-MM-dd} for {normalizedCurrency}.");
+                $"No exchange rate within six months prior to {purchase.TransactionDate:yyyy-MM-dd} for {currency}.");
         }
 
         var convertedAmount = Math.Round(
@@ -48,7 +46,7 @@ public sealed class CurrencyConversionService
 
         return ConvertedPurchaseResponse.FromPurchase(
             purchase,
-            normalizedCurrency,
+            currency,
             exchangeRate,
             convertedAmount);
     }
