@@ -17,6 +17,7 @@ const string DefaultCorsPolicy = "DefaultCorsPolicy";
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 builder.Services.ConfigureDatabaseOptions(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.Configure<TreasuryRatesOptions>(builder.Configuration.GetSection("TreasuryRates"));
 builder.Services.AddCors(options =>
