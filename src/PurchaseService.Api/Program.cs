@@ -38,6 +38,7 @@ builder.Services.AddScoped<CurrencyConversionService>();
 builder.Services.AddScoped<IMediator, Mediator>();
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CommandSanitizationBehavior<,>));
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestLoggingBehavior<,>));
+builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CommandSideEffectBehavior<,>));
 builder.Services.AddScoped<IRequestHandler<CreatePurchaseCommand, PurchaseResponse>, CreatePurchaseCommandHandler>();
 builder.Services.AddScoped<IRequestHandler<GetPurchaseQuery, ConvertedPurchaseResponse?>, GetPurchaseQueryHandler>();
 builder.Services.AddScoped<ICommandSanitizer<CreatePurchaseCommand>, CreatePurchaseCommandSanitizer>();
