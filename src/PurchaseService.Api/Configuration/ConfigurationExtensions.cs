@@ -103,8 +103,7 @@ public static class ConfigurationExtensions
             Host = uri.Host,
             Port = uri.Port > 0 ? uri.Port : 5432,
             Database = uri.AbsolutePath.Trim('/'),
-            SslMode = SslMode.Require,
-            TrustServerCertificate = true
+            SslMode = SslMode.Require
         };
 
         if (!string.IsNullOrWhiteSpace(uri.UserInfo))
