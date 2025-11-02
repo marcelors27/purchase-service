@@ -9,6 +9,4 @@ public sealed class TreasuryRatesOptions
     public int HttpTimeoutSeconds { get; set; } = 10;
 
     public string UserAgent { get; set; } = "purchase-service/1.0";
-
-    public int CacheDurationSeconds { get; set; } = 300;
 }
