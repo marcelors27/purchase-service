@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,7 +55,12 @@ public sealed class Mediator : IMediator
             throw new ArgumentNullException(nameof(request));
         }
 
-        return Invoke((dynamic)request, cancellationToken);
+        var requestType = request.GetType();
+        var invokeMethod = typeof(Mediator)
+            .GetMethod(nameof(Invoke), BindingFlags.Instance | BindingFlags.NonPublic)!
+            .MakeGenericMethod(requestType, typeof(TResponse));
+
+        return (Task<TResponse>)invokeMethod.Invoke(this, new object[] { request, cancellationToken })!;
     }
 
     [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Delegates manage lifetime.")]
