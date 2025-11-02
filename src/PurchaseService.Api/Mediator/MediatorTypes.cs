@@ -1,4 +1,9 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace PurchaseService.Api.Mediator;
 
@@ -25,6 +30,14 @@ public interface IMediator
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
 }
 
+public delegate Task<TResponse> RequestHandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken cancellationToken);
+
+public interface IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TRequest, TResponse> next);
+}
+
 public sealed class Mediator : IMediator
 {
     private readonly IServiceProvider _serviceProvider;
@@ -36,8 +49,27 @@ public sealed class Mediator : IMediator
 
     public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
-        var handlerType = typeof(IRequestHandler<,>).MakeGenericType(request.GetType(), typeof(TResponse));
-        dynamic handler = _serviceProvider.GetRequiredService(handlerType);
-        return handler.Handle((dynamic)request, cancellationToken);
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        return Invoke((dynamic)request, cancellationToken);
+    }
+
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Delegates manage lifetime.")]
+    private Task<TResponse> Invoke<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
+        where TRequest : IRequest<TResponse>
+    {
+        var handler = _serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
+        RequestHandlerDelegate<TRequest, TResponse> pipeline = handler.Handle;
+
+        foreach (var behavior in _serviceProvider.GetServices<IPipelineBehavior<TRequest, TResponse>>().Reverse())
+        {
+            var next = pipeline;
+            pipeline = (req, ct) => behavior.Handle(req, ct, next);
+        }
+
+        return pipeline(request, cancellationToken);
     }
 }
