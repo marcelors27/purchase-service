@@ -13,6 +13,7 @@ The service reads configuration from `appsettings.json` and environment variable
 
 - `Database:ConnectionString` – PostgreSQL connection string. Defaults to `Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres`.
 - `TreasuryRates:BaseUrl` – base URL for the Treasury exchange-rate API.
+- `TreasuryRates:CacheDurationSeconds` – in-memory cache duration (seconds) for Treasury exchange-rate lookups. Defaults to `300`.
 
 Environment variables can override configuration using the `__` separator, e.g.
 
@@ -78,3 +79,47 @@ DOTNET_CLI_HOME=$PWD/.dotnet dotnet test
 ```
 
 Ensure Docker is running before enabling these tests.
+
+## Deploying to Railway
+
+### Prerequisites
+
+- Railway CLI installed (`npm install -g @railway/cli`)
+- Logged in and linked to the project:
+  ```bash
+  railway login
+  railway link
+  ```
+
+### Environments
+
+- `develop` – https://purchase-service-development.up.railway.app
+- `production` – configure your custom domain or Railway-provided URL in the Production environment
+
+Each environment must have the following variables set (adjust to match the provisioned PostgreSQL instance):
+
+- `ASPNETCORE_ENVIRONMENT` (`Develop` or `Production`)
+- `DATABASE_URL_DEVELOP` (develop) / `DATABASE_URL_PRODUCTION` (production) – full PostgreSQL URL from the Railway database plugin
+- Optional: `TreasuryRates__BaseUrl`, `TreasuryRates__UserAgent`, etc., if overriding defaults
+
+### Deploy commands
+
+Publish the Docker image and deploy the current workspace:
+
+#### Develop
+```bash
+railway up --environment develop
+```
+
+#### Production
+```bash
+railway up --environment production
+```
+
+View logs:
+
+```bash
+railway logs --environment develop
+```
+
+> After updating environment variables in the dashboard or via CLI, trigger a redeploy (`railway redeploy --environment <env>` or `railway up …`) to apply the changes.
