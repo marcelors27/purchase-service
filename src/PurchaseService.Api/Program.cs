@@ -13,10 +13,21 @@ SqlMapper.RemoveTypeMap(typeof(DateOnly?));
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string DefaultCorsPolicy = "DefaultCorsPolicy";
+
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.ConfigureDatabaseOptions(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.Configure<TreasuryRatesOptions>(builder.Configuration.GetSection("TreasuryRates"));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        DefaultCorsPolicy,
+        policy => policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowAnyOrigin());
+});
 
 builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
 builder.Services.AddSingleton<SchemaInitializer>();
@@ -46,6 +57,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Local"))
 {
     app.MapOpenApi();
 }
+
+app.UseRouting();
+app.UseCors(DefaultCorsPolicy);
 
 app.MapControllers();
 
