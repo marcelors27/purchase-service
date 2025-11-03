@@ -2,6 +2,56 @@
 
 Purchase Service is an ASP.NET Core 9.0 minimal API that stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
 
+## Architecture Overview
+
+### CQRS
+
+The service uses a simple in-process CQRS setup (`src/PurchaseService.Api/Mediator`) to separate commands that change state from queries that read data.
+
+- **Commands** – `CreatePurchaseCommand` writes a purchase entry (`CreatePurchaseCommandHandler`).
+- **Queries** – `GetPurchaseQuery` reads and converts an existing purchase (`GetPurchaseQueryHandler`).
+
+### Pipeline Behaviors
+
+Commands and queries flow through MediatR-style pipeline behaviors before hitting their handlers:
+
+- `CommandSanitizationBehavior` trims descriptions, rounds amounts, and rejects invalid command payloads (HTTP 400 via `RequestValidationException`).
+- `RequestLoggingBehavior` logs entry/exit for every request and records total execution time.
+- `CommandSideEffectBehavior` represents post-command side effects; it currently logs where an AMQP message would be published.
+
+### Event Sourcing (Internal)
+
+Handlers publish events to an in-process dispatcher (`EventDispatcher`):
+
+- **Event** – `PurchaseCreated` captures the purchase ID, description, date, and amount.
+- **Handler** – `PurchaseCreatedHandler` currently logs that the event fired, illustrating where downstream side effects would occur.
+
+This setup keeps command handlers focused on domain logic while allowing additional subscribers to react to domain events later.
+
+### Caching
+
+Treasury exchange rates are cached in-memory (`CurrencyConversionService`/`TreasuryRatesClient`) using the configured `TreasuryRates:CacheDurationSeconds` so repeated currency lookups do not hammer the external API. Rates come from the U.S. Treasury Reporting Rates of Exchange.
+
+### Example Requests
+
+Create a purchase:
+
+```bash
+curl -X POST http://localhost:8080/purchases \
+  -H "Content-Type: application/json" \
+  -d '{
+        "description": "Coffee",
+        "transactionDate": "2024-06-25",
+        "amount": 12.34
+      }'
+```
+
+Query a converted purchase:
+
+```bash
+curl "http://localhost:8080/purchases/{purchaseId}?currency=EUR"
+```
+
 ## Requirements
 
 - .NET SDK 9.0.306 or later
@@ -23,16 +73,16 @@ export Database__ConnectionString="Host=localhost;Port=5432;Database=purchases;U
 
 ## Running the API locally
 
-1. Ensure PostgreSQL is available and the configured connection string is valid.
-2. Restore and build the solution:
+1. Ensure PostgreSQL is available (run `docker compose up db` or point to an existing instance) and confirm the connection string in `appsettings.Local.json`/environment variables.
+2. Restore dependencies and build:
    ```bash
    dotnet build
    ```
-3. Run the API:
+3. Start the API (schema migrations run automatically at startup):
    ```bash
    dotnet run --project src/PurchaseService.Api
    ```
-4. The API listens on `http://localhost:8080` inside the Docker container and the default Kestrel port when run locally. Use the included HTTP file `src/PurchaseService.Api/PurchaseService.Api.http` or tools such as `curl` to exercise the endpoints.
+4. The API listens on `http://localhost:8080` when containerized and the ASP.NET Core default port (usually `http://localhost:5000`) when run directly. Use `src/PurchaseService.Api/PurchaseService.Api.http` or the `curl` examples above to verify.
 
 ## Docker Compose
 
@@ -107,14 +157,31 @@ Each environment must have the following variables set (adjust to match the prov
 Publish the Docker image and deploy the current workspace:
 
 #### Develop
-```bash
-railway up --environment develop
-```
+1. Log in and link the project (one-time):
+   ```bash
+   railway login
+   railway link
+   ```
+2. Ensure `DATABASE_URL_DEVELOP` and other settings are defined (`railway variables --environment develop`).
+3. Deploy the latest code:
+   ```bash
+   railway up --environment develop
+   ```
+4. Watch logs (optional):
+   ```bash
+   railway logs --environment develop
+   ```
 
 #### Production
-```bash
-railway up --environment production
-```
+1. Confirm all production environment variables (especially `DATABASE_URL_PRODUCTION`) are set.
+2. Trigger the deployment:
+   ```bash
+   railway up --environment production
+   ```
+3. Verify logs and health:
+   ```bash
+   railway logs --environment production
+   ```
 
 View logs:
 
