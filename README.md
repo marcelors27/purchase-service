@@ -63,7 +63,6 @@ The service reads configuration from `appsettings.json` and environment variable
 
 - `Database:ConnectionString` – PostgreSQL connection string. Defaults to `Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres`.
 - `TreasuryRates:BaseUrl` – base URL for the Treasury exchange-rate API.
-- `TreasuryRates:CacheDurationSeconds` – in-memory cache duration (seconds) for Treasury exchange-rate lookups. Defaults to `300`.
 
 Environment variables can override configuration using the `__` separator, e.g.
 
