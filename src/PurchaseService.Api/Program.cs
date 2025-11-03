@@ -1,11 +1,13 @@
 using Dapper;
 using PurchaseService.Api.Application.Purchases;
+using PurchaseService.Api.Application.Purchases.Events;
 using PurchaseService.Api.Configuration;
 using PurchaseService.Api.Contracts;
 using PurchaseService.Api.Data;
 using PurchaseService.Api.Infrastructure;
 using PurchaseService.Api.Mediator;
 using PurchaseService.Api.Mediator.Behaviors;
+using PurchaseService.Api.Events;
 using PurchaseService.Api.Services.Currency;
 
 SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
@@ -36,12 +38,14 @@ builder.Services.AddSingleton<SchemaInitializer>();
 builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 builder.Services.AddScoped<CurrencyConversionService>();
 builder.Services.AddScoped<IMediator, Mediator>();
+builder.Services.AddScoped<IEventDispatcher, EventDispatcher>();
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CommandSanitizationBehavior<,>));
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestLoggingBehavior<,>));
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CommandSideEffectBehavior<,>));
 builder.Services.AddScoped<IRequestHandler<CreatePurchaseCommand, PurchaseResponse>, CreatePurchaseCommandHandler>();
 builder.Services.AddScoped<IRequestHandler<GetPurchaseQuery, ConvertedPurchaseResponse?>, GetPurchaseQueryHandler>();
 builder.Services.AddScoped<ICommandSanitizer<CreatePurchaseCommand>, CreatePurchaseCommandSanitizer>();
+builder.Services.AddScoped<IEventHandler<PurchaseCreated>, PurchaseCreatedHandler>();
 builder.Services.AddHttpClient<ITreasuryRatesClient, TreasuryRatesClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TreasuryRatesOptions>>().Value;
