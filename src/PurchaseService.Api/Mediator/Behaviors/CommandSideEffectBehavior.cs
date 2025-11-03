@@ -25,7 +25,7 @@ public sealed class CommandSideEffectBehavior<TRequest, TResponse> : IPipelineBe
         if (request is ICommand<TResponse>)
         {
             _logger.LogInformation(
-                "Command {CommandName} completed; an external AMQP side-effect message would be queued here.",
+                "Command {CommandName} completed; an external AMQP side-effect message could be queued here.",
                 typeof(TRequest).Name);
         }
 

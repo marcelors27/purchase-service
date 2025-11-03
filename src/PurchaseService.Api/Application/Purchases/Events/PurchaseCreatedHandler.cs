@@ -17,7 +17,7 @@ public sealed class PurchaseCreatedHandler : IEventHandler<PurchaseCreated>
     public Task HandleAsync(PurchaseCreated @event, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "PurchaseCreated event handled for PurchaseId {PurchaseId}: side-effect log placeholder.",
+            "PurchaseCreated event handled for PurchaseId {PurchaseId}: internal side-effect could be placed here.",
             @event.PurchaseId);
 
         return Task.CompletedTask;

@@ -33,7 +33,7 @@ public sealed class CreatePurchaseCommandHandler : IRequestHandler<CreatePurchas
                 purchase.Id,
                 purchase.Description,
                 purchase.TransactionDate,
-                purchase.Amount),
+                purchase.AmountUsd),
             cancellationToken);
 
         return PurchaseResponse.FromPurchase(purchase);
