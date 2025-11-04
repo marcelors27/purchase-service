@@ -1,4 +1,5 @@
 using Dapper;
+using PurchaseService.Api.Application.Exceptions;
 using PurchaseService.Api.Application.Purchases;
 using PurchaseService.Api.Application.Purchases.Events;
 using PurchaseService.Api.Configuration;
@@ -20,6 +21,7 @@ const string DefaultCorsPolicy = "DefaultCorsPolicy";
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache();
 builder.Services.ConfigureDatabaseOptions(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.Configure<TreasuryRatesOptions>(builder.Configuration.GetSection("TreasuryRates"));
@@ -46,6 +48,7 @@ builder.Services.AddScoped<IRequestHandler<CreatePurchaseCommand, PurchaseRespon
 builder.Services.AddScoped<IRequestHandler<GetPurchaseQuery, ConvertedPurchaseResponse?>, GetPurchaseQueryHandler>();
 builder.Services.AddScoped<ICommandSanitizer<CreatePurchaseCommand>, CreatePurchaseCommandSanitizer>();
 builder.Services.AddScoped<IEventHandler<PurchaseCreated>, PurchaseCreatedHandler>();
+builder.Services.AddExceptionHandler<PurchaseExceptionHandler>();
 builder.Services.AddHttpClient<ITreasuryRatesClient, TreasuryRatesClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TreasuryRatesOptions>>().Value;
@@ -68,6 +71,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Local"))
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
 app.UseRouting();
 app.UseCors(DefaultCorsPolicy);
 
