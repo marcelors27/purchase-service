@@ -1,6 +1,6 @@
 # Purchase Service
 
-Purchase Service is an ASP.NET Core 9.0 minimal API that stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
+Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes: it showcases patterns such as CQRS, MediatR behaviors, and centralized exception handling. In a production MVP serving only two endpoints we would likely start leaner and gradually adopt these tactics if/when complexity justified the extra structure. It stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
 
 ## Architecture Overview
 
@@ -31,6 +31,27 @@ This setup keeps command handlers focused on domain logic while allowing additio
 ### Caching
 
 Treasury exchange rates are cached in-memory (`CurrencyConversionService`/`TreasuryRatesClient`) using the configured `TreasuryRates:CacheDurationSeconds` so repeated currency lookups do not hammer the external API. Rates come from the U.S. Treasury Reporting Rates of Exchange.
+
+## Project Conventions
+
+- **Infrastructure adapters** – Cross-cutting plumbing that only touches external dependencies lives in `src/PurchaseService.Api/Infrastructure`. `DateOnlyTypeHandler` sits there because it only adapts Dapper’s database representation of dates and never interacts with domain logic.
+- **Collocated contracts** – Interfaces that exist solely to support a single implementation plus test doubles stay beside their class (e.g., `ITreasuryRatesClient`/`TreasuryRatesClient`). Once a contract gains multiple implementations or wider reuse, it is promoted to its own file to flag the boundary explicitly.
+- **Exception handling** – `PurchaseExceptionHandler` centralizes HTTP error mapping using `IExceptionHandler`, keeping controllers/minimal endpoints free of status-code branching while enforcing consistent response envelopes.
+- **Slim endpoints** – Minimal API endpoints delegate immediately to MediatR commands/queries. Each command encapsulates validation and domain rules, letting controllers stay declarative (`app.MapPost`, etc.) while the pipeline enforces behaviors (logging, sanitization, side effects).
+  - Domain isolation: request handlers validate invariants via FluentValidation, convert to value objects/entities, and publish domain events; infrastructure concerns (DB, HTTP) are injected, so command/query code focuses on business rules.
+
+### Reuse vs. Service-Specific Code
+
+- **Candidate libraries**
+  - `CommandSanitizationBehavior`, `RequestLoggingBehavior`, `CommandSideEffectBehavior` – reusable MediatR pipeline behaviors for sanitization, logging, and side-effect hooks.
+  - `PurchaseExceptionHandler` pattern – a generic `IExceptionHandler` wrapper that maps custom exceptions to consistent problem details.
+  - `DateOnlyTypeHandler` – Dapper adapter for `DateOnly`, usable by any service that persists dates.
+  - Treasury API client abstractions – `ITreasuryRatesClient`/`CurrencyConversionService` illustrate an HTTP + caching client that could be parameterized for other rate providers.
+- **Service-specific routines**
+  - Purchase domain commands/queries (`CreatePurchaseCommand`, `GetPurchaseQuery`) and their validators – enforce business rules unique to this service.
+  - `PurchaseRepository` and related Dapper SQL – bound to the purchases schema and table layout.
+  - `PurchaseCreated` event and handler – internal event model for downstream purchase workflows.
+  - `PurchaseRequest` DTOs and FluentValidation rules – tied to this API’s contract signatures.
 
 ### Example Requests
 
@@ -113,6 +134,13 @@ Conversion rules:
 - Uses the latest Treasury exchange rate on or before the purchase date, up to six months prior.
 - Returns a 400 error if no eligible rate exists.
 
+## Quality Assurance
+
+- **Unit tests** – `tests/PurchaseService.Api.Tests/Services/CurrencyConversionServiceTests.cs` exercises exchange-rate lookup, caching behavior, and error paths; `tests/PurchaseService.Api.Tests/Validation/PurchaseRequestValidatorTests.cs` covers the fluent validation rules for incoming payloads.
+- **Integration tests** – `tests/PurchaseService.Api.Tests/Integration/PurchaseApiTests.cs` hits the HTTP endpoints through `PurchaseApiFactory`, optionally running against a Testcontainers-based PostgreSQL instance when `RUN_DOCKER_TESTS` is enabled.
+- **Supporting doubles** – `tests/PurchaseService.Api.Tests/TestDoubles/TestTreasuryRatesClient.cs` provides deterministic exchange-rate responses so service tests stay hermetic.
+- **How to run** – `dotnet test` runs the unit suite; export `RUN_DOCKER_TESTS=1` before invoking it to include the container-backed integration suite.
+
 ## Automated Tests
 
 Restore and run the test suite:
@@ -129,6 +157,14 @@ DOTNET_CLI_HOME=$PWD/.dotnet dotnet test
 ```
 
 Ensure Docker is running before enabling these tests.
+
+## Branching & Release Flow
+
+- **Feature branches** – Cada nova funcionalidade nasce a partir de `develop` (`git checkout -b feature/<nome>`), recebe commits isolados e abre PR para `develop`. O merge deve passar pela revisão e pela suíte de testes automatizados.
+- **Integração contínua** – A branch `develop` representa o fluxo contínuo; merges nela disparam automaticamente um deploy para o ambiente `develop` no Railway.
+- **Releases** – Quando o estado de `develop` está pronto para produção, criamos uma branch `release/<versão>` baseada em `develop`, fazemos ajustes finais (changelog, bump de versão) e abrimos PR para `main`.
+- **Produção** – Ao mesclar em `main`, o build dispara o deploy para o ambiente de produção no Railway. Após o merge, a branch de release pode ser removida.
+- **Hotfixes** – Problemas críticos em produção podem ser tratados criando `hotfix/<issue>` a partir de `main`, liberando o patch e mesclando de volta em `main` e `develop` para manter as linhas alinhadas.
 
 ## Deploying to Railway
 
