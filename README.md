@@ -99,7 +99,7 @@ The API becomes available on `http://localhost:8080` and uses the compose-provis
 - `POST /purchases`
   - Body: `{ "description": "Coffee", "transactionDate": "2024-06-25", "amount": 12.34 }`
   - Stores a purchase and returns the persisted payload with the generated identifier.
-- `GET /purchases/{id}?currency=EUR`
+- `GET /purchases/{id}?currency=Euro`
   - Retrieves the purchase in the requested currency, returning the exchange rate and converted amount.
 
 Validation rules:
@@ -144,7 +144,7 @@ Ensure Docker is running before enabling these tests.
 ### Environments
 
 - `develop` – https://purchase-service-development.up.railway.app
-- `production` – configure your custom domain or Railway-provided URL in the Production environment
+- `production` – https://purchase-service-production.up.railway.app
 
 Each environment must have the following variables set (adjust to match the provisioned PostgreSQL instance):
 
