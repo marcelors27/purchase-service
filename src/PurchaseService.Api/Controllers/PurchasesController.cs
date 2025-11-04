@@ -1,11 +1,7 @@
-using System.Linq;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PurchaseService.Api.Application.Exceptions;
 using PurchaseService.Api.Application.Purchases;
 using PurchaseService.Api.Contracts;
 using PurchaseService.Api.Mediator;
-using PurchaseService.Api.Services.Currency;
 
 namespace PurchaseService.Api.Controllers;
 
@@ -25,24 +21,13 @@ public sealed class PurchasesController : ControllerBase
         [FromBody] CreatePurchaseRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = new CreatePurchaseCommand(
-                request.Description,
-                request.TransactionDate,
-                request.Amount);
+        var command = new CreatePurchaseCommand(
+            request.Description,
+            request.TransactionDate,
+            request.Amount);
 
-            var response = await _mediator.Send(command, cancellationToken);
-            return Created($"/purchases/{response.Id}", response);
-        }
-        catch (RequestValidationException ex)
-        {
-            var errors = ex.Errors.ToDictionary(
-                static pair => pair.Key,
-                static pair => pair.Value);
-
-            return ValidationProblem(new ValidationProblemDetails(errors));
-        }
+        var response = await _mediator.Send(command, cancellationToken);
+        return Created($"/purchases/{response.Id}", response);
     }
 
     [HttpGet("{id:guid}")]
@@ -51,24 +36,14 @@ public sealed class PurchasesController : ControllerBase
         [FromQuery] string currency,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var query = new GetPurchaseQuery(id, currency);
-            var converted = await _mediator.Send(query, cancellationToken);
+        var query = new GetPurchaseQuery(id, currency);
+        var converted = await _mediator.Send(query, cancellationToken);
 
-            if (converted is null)
-            {
-                return NotFound();
-            }
-
-            return Ok(converted);
-        }
-        catch (CurrencyConversionException ex)
+        if (converted is null)
         {
-            return Problem(
-                title: "Currency conversion failed",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest);
+            return NotFound();
         }
+
+        return Ok(converted);
     }
 }
