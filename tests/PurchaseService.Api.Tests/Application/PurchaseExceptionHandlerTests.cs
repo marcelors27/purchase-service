@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PurchaseService.Api.Application.Exceptions;
 using PurchaseService.Api.Services.Currency;
@@ -14,8 +16,7 @@ public sealed class PurchaseExceptionHandlerTests
     public async Task TryHandleAsync_WritesValidationProblemDetails()
     {
         var handler = new PurchaseExceptionHandler(NullLogger<PurchaseExceptionHandler>.Instance);
-        var httpContext = new DefaultHttpContext();
-        httpContext.Response.Body = new MemoryStream();
+        var httpContext = CreateHttpContext();
 
         var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
@@ -41,8 +42,7 @@ public sealed class PurchaseExceptionHandlerTests
     public async Task TryHandleAsync_WritesConversionProblemDetails()
     {
         var handler = new PurchaseExceptionHandler(NullLogger<PurchaseExceptionHandler>.Instance);
-        var httpContext = new DefaultHttpContext();
-        httpContext.Response.Body = new MemoryStream();
+        var httpContext = CreateHttpContext();
 
         var exception = new CurrencyConversionException("Conversion failed.");
 
@@ -55,5 +55,55 @@ public sealed class PurchaseExceptionHandlerTests
         using var document = await JsonDocument.ParseAsync(httpContext.Response.Body);
         Assert.Equal("Currency conversion failed", document.RootElement.GetProperty("title").GetString());
         Assert.Equal("Conversion failed.", document.RootElement.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_UnwrapsTargetInvocation_ForValidationExceptions()
+    {
+        var handler = new PurchaseExceptionHandler(NullLogger<PurchaseExceptionHandler>.Instance);
+        var httpContext = CreateHttpContext();
+
+        var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["description"] = ["Description must not exceed 50 characters."]
+        };
+
+        var wrapped = new TargetInvocationException(new RequestValidationException(errors));
+
+        var handled = await handler.TryHandleAsync(httpContext, wrapped, CancellationToken.None);
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_UnwrapsTargetInvocation_ForCurrencyExceptions()
+    {
+        var handler = new PurchaseExceptionHandler(NullLogger<PurchaseExceptionHandler>.Instance);
+        var httpContext = CreateHttpContext();
+
+        var wrapped = new TargetInvocationException(new CurrencyConversionException("Conversion failed."));
+
+        var handled = await handler.TryHandleAsync(httpContext, wrapped, CancellationToken.None);
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+    }
+
+    private static DefaultHttpContext CreateHttpContext()
+    {
+        var serviceProvider = new ServiceCollection()
+            .AddLogging()
+            .AddProblemDetails()
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext
+        {
+            RequestServices = serviceProvider
+        };
+
+        context.Response.Body = new MemoryStream();
+
+        return context;
     }
 }
