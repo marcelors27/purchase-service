@@ -158,7 +158,7 @@ jobs:
         with:
           target: http://127.0.0.1:8080
           cmd_options: "-a"
-          artifact_name: zap-scan
+          artifact_name: zapscan
 
       - name: Stop API
         if: always()
