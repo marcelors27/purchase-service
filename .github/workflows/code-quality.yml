@@ -90,6 +90,12 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
+      - name: Pre-pull dependencies
+        run: |
+          docker pull postgres:16
+          docker pull zaproxy/zap-stable:latest
+          dotnet restore tests/PurchaseService.Api.Tests/PurchaseService.Api.Tests.csproj
+
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
