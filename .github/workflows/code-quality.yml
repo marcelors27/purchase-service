@@ -97,7 +97,7 @@ jobs:
 
       - name: Wait for database
         run: |
-          for i in {1..24}
+          for i in {1..60}
           do
             if pg_isready -h postgres -p 5432 -U postgres -d purchases; then
               exit 0
@@ -111,16 +111,16 @@ jobs:
 
       - name: Start API
         env:
-          ASPNETCORE_ENVIRONMENT: Develop
+          ASPNETCORE_ENVIRONMENT: Development
           Database__ConnectionString: Host=postgres;Port=5432;Database=purchases;Username=postgres;Password=postgres
         run: |
           dotnet run --project src/PurchaseService.Api --configuration Release --no-build --urls http://0.0.0.0:8080 &
           echo $! > api.pid
-          sleep 5
+          sleep 30
 
       - name: Wait for API to become ready
         run: |
-          for i in {1..24}
+          for i in {1..60}
           do
             if curl -s -o /dev/null http://127.0.0.1:8080/openapi/v1.json || \
                curl -s -o /dev/null http://127.0.0.1:8080/swagger/index.html; then
