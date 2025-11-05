@@ -109,14 +109,10 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - name: Inspect PostgreSQL logs
-        if: always()
-        run: docker logs --tail 200 postgres
-
       - name: Start API
         env:
           ASPNETCORE_ENVIRONMENT: Development
-          Database__ConnectionString: Host=postgres;Port=5432;Database=purchases;Username=postgres;Password=postgres
+          Database__ConnectionString: Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres
         run: |
           dotnet run --project src/PurchaseService.Api --configuration Release --no-build --urls http://0.0.0.0:8080 > api.log 2>&1 &
           echo $! > api.pid
