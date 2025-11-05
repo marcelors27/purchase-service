@@ -13,16 +13,16 @@ The service uses a simple in-process CQRS setup (`src/PurchaseService.Api/Mediat
 ```mermaid
 flowchart LR
     ClientInput["Client Request"]
-    CommandEndpoint["Command Endpoint\n(POST /purchases)"]
-    CommandBehaviors["Command Pipeline Behaviors\n(Sanitization, Logging, Side Effects)"]
-    CommandHandler["Command Handler\n(CreatePurchaseCommandHandler)"]
-    WriteModel["Write Model\n(PostgreSQL purchases)"]
+    CommandEndpoint{{"Command Endpoint<br/>(POST /purchases)"}}
+    CommandBehaviors["Command Pipeline Behaviors<br/>(Sanitization, Logging, Side Effects)"]
+    CommandHandler["Command Handler<br/>(CreatePurchaseCommandHandler)"]
+    WriteModel["Write Model<br/>(PostgreSQL purchases)"]
 
     ClientQuery["Client Query"]
-    QueryEndpoint["Query Endpoint\n(GET /purchases/{id})"]
-    QueryBehaviors["Query Pipeline Behaviors\n(Logging)"]
-    QueryHandler["Query Handler\n(GetPurchaseQueryHandler)"]
-    ReadModel["Read Model / View\n(Currency-converted DTO)"]
+    QueryEndpoint{{"Query Endpoint<br/>(GET /purchases/{id})"}}
+    QueryBehaviors["Query Pipeline Behaviors<br/>(Logging)"]
+    QueryHandler["Query Handler<br/>(GetPurchaseQueryHandler)"]
+    ReadModel["Read Model / View<br/>(Currency-converted DTO)"]
 
     ClientInput --> CommandEndpoint --> CommandBehaviors --> CommandHandler --> WriteModel
     WriteModel -->|changes normalized data| WriteModel
@@ -219,28 +219,31 @@ Ensure Docker is running before enabling these tests.
 - **Production** – Merging into `main` triggers the deployment to the production Railway environment. The release branch can be deleted once merged.
 - **Hotfixes** – Critical production issues branch from `main` (`hotfix/<issue>`), ship the fix, and merge back into both `main` and `develop` to keep streams aligned.
 
-## CI Pipeline Stages
+## Continuous Integration & Security Testing
 
-- **Analyze** – Runs on every push/PR to `develop` and `main`. Restores dependencies, checks formatting via `dotnet format --verify-no-changes`, and builds with analyzers treating warnings as errors to enforce code style and quality gates.
-- **SAST (CodeQL)** – Executes only on `main` after the analyze stage succeeds. CodeQL inspects the C# solution for security flaws (e.g., injection, unsafe deserialization) and publishes results to the GitHub code-scanning dashboard.
-- **RAST (OWASP Zap)** – Also gated to `main`. Spins up PostgreSQL, launches the API, waits for readiness, and runs OWASP ZAP Baseline against the local endpoint to catch runtime security misconfigurations; always tears down the API afterward.
+Everything runs through `.github/workflows/code-quality.yml`, which orchestrates the code-quality and security checks whenever `develop` or `main` receives new commits.
 
-## Application Security Testing
+### Analyze Stage
 
-### Static Analysis (SAST)
+- Trigger – every push or pull request targeting `develop` or `main`.
+- Tasks – `dotnet restore`, `dotnet format --verify-no-changes --no-restore`, and `dotnet build --configuration Release -warnaserror --no-restore`. This keeps style, analyzers, and baseline build health enforced before any security scans execute.
+- Outcome – upstream stages must pass before the security tooling (CodeQL, ZAP) is allowed to run.
 
-- Tooling – [GitHub CodeQL](https://github.com/github/codeql) runs via `.github/workflows/code-quality.yml` after the `analyze` job succeeds.
-- Scope – analyzes the compiled C# projects, looking for CWE patterns (SQL injection, path traversal, deserialization issues, etc.) with zero developer configuration.
-- Results – findings appear under the repository’s “Security > Code scanning alerts”. Each alert links back to the offending file, line, and data-flow trace.
-- Local reproduction – install the [CodeQL CLI](https://codeql.github.com/docs/codeql-cli/) and run `codeql database create`/`codeql database analyze` mirroring the workflow. Useful when triaging or tuning queries before pushing fixes.
+### Static Application Security Testing (SAST)
 
-### Runtime Analysis (RAST)
+- Trigger – runs on `main` once the analyze stage succeeds.
+- Tooling – [GitHub CodeQL](https://github.com/github/codeql) inspects the C# projects for common CWE patterns (SQL injection, path traversal, unsafe deserialization).
+- Results – alerts appear under “Security > Code scanning alerts”, each with file/line references and data-flow traces for easier remediation.
+- Local reproduction – install the [CodeQL CLI](https://codeql.github.com/docs/codeql-cli/) and mimic the workflow (`codeql database create`, `codeql database analyze`) when verifying fixes before pushing.
 
-- Tooling – [OWASP ZAP Baseline](https://www.zaproxy.org/docs/docker/baseline-scan/) executes against the locally hosted API inside the same workflow.
-- Environment – the job provisions PostgreSQL, starts the API with `dotnet run` on `http://0.0.0.0:8080`, waits for `/openapi/v1.json` or `/swagger/index.html`, then performs passive scans (no destructive payloads).
-- Compliance – responses pass through the middleware added in `src/PurchaseService.Api/Program.cs` that disables caching, addressing ZAP alert 10049 (“Storable and Cacheable Content”). Missing `Sec-Fetch-Dest` headers triggered by automated scanners are documented as non-actionable.
-- Artifacts – ZAP uploads `zap-scan` artifacts containing the HTML report. Review these in the workflow run summary (`Actions > Code Quality > Artifacts`).
-- Local reproduction – install Docker and run `docker run --rm --network host -v $(pwd):/zap/wrk:o zaproxy/zap-baseline -t http://127.0.0.1:8080 -r zap-report.html` while the API is running locally to iterate faster on fixes.
+### Runtime Application Security Testing (RAST)
+
+- Trigger – executes on `main` after analyze completes.
+- Tooling – [OWASP ZAP Baseline](https://www.zaproxy.org/docs/docker/baseline-scan/) runs against a locally hosted API.
+- Environment – the job provisions PostgreSQL, boots the API via `dotnet run` bound to `http://0.0.0.0:8080`, waits for `/openapi/v1.json` or `/swagger/index.html`, and performs passive scans.
+- Compliance – ZAP findings about cacheable responses are mitigated through the middleware in `src/PurchaseService.Api/Program.cs` that forces `Cache-Control: no-store`. `Sec-Fetch-Dest` warnings stem from scanner client behavior and are tracked as informational.
+- Artifacts – the workflow uploads a `zap-scan` bundle with the HTML report (`Actions > Code Quality > Artifacts`).
+- Local reproduction – run the API locally and execute `docker run --rm --network host -v $(pwd):/zap/wrk:o zaproxy/zap-baseline -t http://127.0.0.1:8080 -r zap-report.html` to iterate on fixes without waiting for CI.
 
 ## Deploying to Railway
 
