@@ -99,7 +99,7 @@ jobs:
         run: |
           for i in {1..20}
           do
-            if pg_isready -h postgres -p 5432 -U postgres -d purchases; then
+            if pg_isready -h localhost -p 5432 -U postgres -d purchases; then
               exit 0
             fi
             sleep 5
@@ -110,8 +110,8 @@ jobs:
           PGPASSWORD: postgres
 
       - name: Inspect PostgreSQL logs
-        run: docker logs --tail 200 postgres
         if: always()
+        run: docker logs --tail 200 postgres
 
       - name: Start API
         env:
@@ -120,7 +120,6 @@ jobs:
         run: |
           dotnet run --project src/PurchaseService.Api --configuration Release --no-build --urls http://0.0.0.0:8080 > api.log 2>&1 &
           echo $! > api.pid
-          sleep 60
 
       - name: Wait for API to become ready
         run: |
@@ -130,7 +129,14 @@ jobs:
                curl -s -o /dev/null http://127.0.0.1:8080/swagger/index.html; then
               exit 0
             fi
+            if ! kill -0 $(cat api.pid) 2>/dev/null; then
+              echo "API process exited prematurely" >&2
+              exit 1
+            fi
             sleep 5
+          done
+          echo "API did not become ready in time" >&2
+          exit 1
           done
           echo "API did not become ready in time" >&2
           exit 1
