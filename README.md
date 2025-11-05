@@ -166,6 +166,12 @@ Ensure Docker is running before enabling these tests.
 - **Production** – Merging into `main` triggers the deployment to the production Railway environment. The release branch can be deleted once merged.
 - **Hotfixes** – Critical production issues branch from `main` (`hotfix/<issue>`), ship the fix, and merge back into both `main` and `develop` to keep streams aligned.
 
+## CI Pipeline Stages
+
+- **Analyze** – Runs on every push/PR to `develop` and `main`. Restores dependencies, checks formatting via `dotnet format --verify-no-changes`, and builds with analyzers treating warnings as errors to enforce code style and quality gates.
+- **SAST (CodeQL)** – Executes only on `main` after the analyze stage succeeds. CodeQL inspects the C# solution for security flaws (e.g., injection, unsafe deserialization) and publishes results to the GitHub code-scanning dashboard.
+- **RAST (OWASP Zap)** – Also gated to `main`. Spins up PostgreSQL, launches the API, waits for readiness, and runs OWASP ZAP Baseline against the local endpoint to catch runtime security misconfigurations; always tears down the API afterward.
+
 ## Deploying to Railway
 
 ### Prerequisites
