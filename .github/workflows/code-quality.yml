@@ -35,7 +35,7 @@ jobs:
         run: dotnet build --configuration Release -warnaserror --no-restore
 
   sast:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     needs: analyze
     runs-on: ubuntu-latest
     permissions:
@@ -58,7 +58,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
 
   rast:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     needs: analyze
     runs-on: ubuntu-latest
     services:
@@ -90,6 +90,25 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Wait for database
+        run: |
+          for i in {1..24}
+          do
+            if pg_isready -h postgres -p 5432 -U postgres -d purchases; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "PostgreSQL did not become ready in time" >&2
+          exit 1
+        env:
+          PGPASSWORD: postgres
+
       - name: Start API
         env:
           ASPNETCORE_ENVIRONMENT: Develop
@@ -101,7 +120,7 @@ jobs:
 
       - name: Wait for API to become ready
         run: |
-          for i in {1..12}
+          for i in {1..24}
           do
             if curl -s -o /dev/null http://127.0.0.1:8080/openapi/v1.json || \
                curl -s -o /dev/null http://127.0.0.1:8080/swagger/index.html; then
