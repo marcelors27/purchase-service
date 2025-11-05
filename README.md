@@ -8,6 +8,8 @@ Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes:
 
 The service uses a simple in-process CQRS setup (`src/PurchaseService.Api/Mediator`) to separate commands that change state from queries that read data.
 
+- **Domain-driven design context** – The purchase domain is intentionally small, yet we still honor DDD-inspired seams: commands encapsulate the ubiquitous language (“purchase”, “amount”, “transaction date”), validators enforce invariants close to the boundary, and the in-process event dispatcher keeps side effects explicit. CQRS lets us keep write-side logic cohesive around aggregates (here, a single purchase record) while read-side projections (`ConvertedPurchaseResponse`) remain tailored for consumers without leaking Dapper or SQL concerns into handlers.
+
 - High-level data flow:
 
 ```mermaid
