@@ -1,6 +1,6 @@
 # Purchase Service
 
-Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes: it showcases patterns such as CQRS, MediatR behaviors, and centralized exception handling. In a production MVP serving only two endpoints we would likely start leaner and gradually adopt these tactics if/when complexity justified the extra structure. It stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
+Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes: it showcases patterns such as CQRS, MediatR behaviors, and centralized exception handling. It stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
 
 ## Architecture Overview
 
