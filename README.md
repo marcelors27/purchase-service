@@ -74,7 +74,7 @@ curl -X POST https://purchase-service-development.up.railway.app/purchases \
 Query a converted purchase:
 
 ```bash
-curl "https://purchase-service-development.up.railway.app/purchases/{purchaseId}?currency=EUR"
+curl "https://purchase-service-development.up.railway.app/purchases/{purchaseId}?currency=Euro"
 ```
 
 ## Requirements
