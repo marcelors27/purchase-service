@@ -90,12 +90,6 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      - name: Pre-pull dependencies
-        run: |
-          docker pull postgres:16
-          docker pull zaproxy/zap-stable:latest
-          dotnet restore tests/PurchaseService.Api.Tests/PurchaseService.Api.Tests.csproj
-
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -115,6 +109,10 @@ jobs:
         env:
           PGPASSWORD: postgres
 
+      - name: Inspect PostgreSQL logs
+        run: docker logs --tail 200 postgres
+        if: always()
+
       - name: Start API
         env:
           ASPNETCORE_ENVIRONMENT: Development
@@ -122,11 +120,11 @@ jobs:
         run: |
           dotnet run --project src/PurchaseService.Api --configuration Release --no-build --urls http://0.0.0.0:8080 &
           echo $! > api.pid
-          sleep 60
+          sleep 30
 
       - name: Wait for API to become ready
         run: |
-          for i in {1..120}
+          for i in {1..60}
           do
             if curl -s -o /dev/null http://127.0.0.1:8080/openapi/v1.json || \
                curl -s -o /dev/null http://127.0.0.1:8080/swagger/index.html; then
@@ -141,7 +139,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: http://127.0.0.1:8080
-          cmd_options: '-a'
+          cmd_options: "-a"
 
       - name: Stop API
         if: always()
