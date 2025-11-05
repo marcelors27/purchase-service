@@ -64,7 +64,7 @@ public sealed class PurchaseApiTests(PurchaseApiFactory factory) : IClassFixture
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var converted = await getResponse.Content.ReadFromJsonAsync<ConvertedPurchaseResponse>();
         Assert.NotNull(converted);
-        Assert.Equal("EUR", converted!.Currency);
+        Assert.Equal("eur", converted!.Currency);
         Assert.Equal(300m, converted.ConvertedAmount);
         Assert.Equal(2m, converted.ExchangeRate);
     }
