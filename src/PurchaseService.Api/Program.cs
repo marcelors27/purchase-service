@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Net.Http.Headers;
 using PurchaseService.Api.Application.Exceptions;
 using PurchaseService.Api.Application.Purchases;
 using PurchaseService.Api.Application.Purchases.Events;
@@ -72,6 +73,26 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Local"))
 }
 
 app.UseExceptionHandler();
+app.Use((context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.GetTypedHeaders();
+        headers.CacheControl = new CacheControlHeaderValue
+        {
+            NoCache = true,
+            NoStore = true,
+            MustRevalidate = true
+        };
+
+        context.Response.Headers["Pragma"] = "no-cache";
+        context.Response.Headers["Expires"] = "0";
+
+        return Task.CompletedTask;
+    });
+
+    return next();
+});
 app.UseRouting();
 app.UseCors(DefaultCorsPolicy);
 
