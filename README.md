@@ -32,6 +32,10 @@ This setup keeps command handlers focused on domain logic while allowing additio
 
 Treasury exchange rates are cached in-memory (`CurrencyConversionService`/`TreasuryRatesClient`) using the configured `TreasuryRates:CacheDurationSeconds` so repeated currency lookups do not hammer the external API. Rates come from the U.S. Treasury Reporting Rates of Exchange.
 
+### Persistence Choice
+
+For writes we stuck with straight Dapper because the service is small and the domain logic around `CreatePurchaseCommand` is limited. In a larger system it is common to combine EF Core (richer change-tracking, migrations) for command-handling with Dapper for read-side queries; the project layout keeps that door open should the service need to grow.
+
 ## Project Conventions
 
 - **Infrastructure adapters** – Cross-cutting plumbing that only touches external dependencies lives in `src/PurchaseService.Api/Infrastructure`. `DateOnlyTypeHandler` sits there because it only adapts Dapper’s database representation of dates and never interacts with domain logic.
