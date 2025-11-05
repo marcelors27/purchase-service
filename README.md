@@ -53,12 +53,12 @@ Treasury exchange rates are cached in-memory (`CurrencyConversionService`/`Treas
   - `PurchaseCreated` event and handler – internal event model for downstream purchase workflows.
   - `PurchaseRequest` DTOs and FluentValidation rules – tied to this API’s contract signatures.
 
-### Example Requests
+### Example Requests (Development)
 
 Create a purchase:
 
 ```bash
-curl -X POST http://localhost:8080/purchases \
+curl -X POST https://purchase-service-development.up.railway.app/purchases \
   -H "Content-Type: application/json" \
   -d '{
         "description": "Coffee",
@@ -70,7 +70,7 @@ curl -X POST http://localhost:8080/purchases \
 Query a converted purchase:
 
 ```bash
-curl "http://localhost:8080/purchases/{purchaseId}?currency=EUR"
+curl "https://purchase-service-development.up.railway.app/purchases/{purchaseId}?currency=EUR"
 ```
 
 ## Requirements
@@ -160,11 +160,11 @@ Ensure Docker is running before enabling these tests.
 
 ## Branching & Release Flow
 
-- **Feature branches** – Cada nova funcionalidade nasce a partir de `develop` (`git checkout -b feature/<nome>`), recebe commits isolados e abre PR para `develop`. O merge deve passar pela revisão e pela suíte de testes automatizados.
-- **Integração contínua** – A branch `develop` representa o fluxo contínuo; merges nela disparam automaticamente um deploy para o ambiente `develop` no Railway.
-- **Releases** – Quando o estado de `develop` está pronto para produção, criamos uma branch `release/<versão>` baseada em `develop`, fazemos ajustes finais (changelog, bump de versão) e abrimos PR para `main`.
-- **Produção** – Ao mesclar em `main`, o build dispara o deploy para o ambiente de produção no Railway. Após o merge, a branch de release pode ser removida.
-- **Hotfixes** – Problemas críticos em produção podem ser tratados criando `hotfix/<issue>` a partir de `main`, liberando o patch e mesclando de volta em `main` e `develop` para manter as linhas alinhadas.
+- **Feature branches** – Start new work from `develop` (`git checkout -b feature/<name>`), keep commits focused, and open a PR back into `develop`. Every merge must pass review plus the automated test suite.
+- **Continuous integration** – The `develop` branch represents the integration line; merges into it automatically trigger a deploy to the Railway `develop` environment.
+- **Releases** – When `develop` is production-ready, create `release/<version>` from it, apply final touches (changelog, version bump), and open a PR into `main`.
+- **Production** – Merging into `main` triggers the deployment to the production Railway environment. The release branch can be deleted once merged.
+- **Hotfixes** – Critical production issues branch from `main` (`hotfix/<issue>`), ship the fix, and merge back into both `main` and `develop` to keep streams aligned.
 
 ## Deploying to Railway
 
