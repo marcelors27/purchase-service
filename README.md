@@ -1,12 +1,61 @@
 # Purchase Service
 
-Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes: it showcases patterns such as CQRS, MediatR behaviors, and centralized exception handling. In a production MVP serving only two endpoints we would likely start leaner and gradually adopt these tactics if/when complexity justified the extra structure. It stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
+Purchase Service is an ASP.NET Core 9.0 minimal API built for didactic purposes: it showcases patterns such as CQRS, MediatR behaviors, and centralized exception handling. It stores purchase transactions in PostgreSQL and retrieves them converted to foreign currencies using the U.S. Treasury Reporting Rates of Exchange.
 
 ## Architecture Overview
 
 ### CQRS
 
 The service uses a simple in-process CQRS setup (`src/PurchaseService.Api/Mediator`) to separate commands that change state from queries that read data.
+
+- High-level data flow:
+
+```mermaid
+flowchart LR
+    ClientInput["Client Request"]
+    CommandEndpoint{{"Command Endpoint<br/>(POST /purchases)"}}
+    CommandBehaviors["Command Pipeline Behaviors<br/>(Sanitization, Logging, Side Effects)"]
+    CommandHandler["Command Handler<br/>(CreatePurchaseCommandHandler)"]
+    WriteModel["Write Model<br/>(PostgreSQL purchases)"]
+
+    ClientQuery["Client Query"]
+    QueryEndpoint{{"Query Endpoint<br/>(GET /purchases/{id})"}}
+    QueryBehaviors["Query Pipeline Behaviors<br/>(Logging)"]
+    QueryHandler["Query Handler<br/>(GetPurchaseQueryHandler)"]
+    ReadModel["Read Model / View<br/>(Currency-converted DTO)"]
+
+    ClientInput --> CommandEndpoint --> CommandBehaviors --> CommandHandler --> WriteModel
+    WriteModel -->|changes normalized data| WriteModel
+
+    ClientQuery --> QueryEndpoint --> QueryBehaviors --> QueryHandler --> ReadModel --> ClientQuery
+```
+
+- How this project combines CQRS with internal event sourcing:
+
+```mermaid
+sequenceDiagram
+    participant Client as API Client
+    participant Command as CreatePurchaseCommand
+    participant Pipeline as Pipeline Behaviors
+    participant Handler as Command Handler
+    participant Repo as PurchaseRepository (Dapper)
+    participant DB as PostgreSQL
+    participant EventBus as In-process Event Dispatcher
+    participant EventHandler as PurchaseCreatedHandler
+
+    Client->>Command: POST /purchases payload
+    Command->>Pipeline: Execute via Sanitization/Logging/SideEffect behaviors
+    Pipeline->>Handler: Invoke handler
+    Handler->>Repo: Insert purchase
+    Repo->>DB: INSERT purchase row
+    DB-->>Repo: Persisted ID
+    Handler->>EventBus: Publish PurchaseCreated
+    EventBus->>EventHandler: Dispatch event
+    EventHandler->>EventHandler: Trigger side effects (logging / future integrations)
+    Handler-->>Pipeline: Return response payload
+    Pipeline-->>Pipeline: CommandSideEffectBehavior logs side-effect placeholder
+    Pipeline-->>Client: Return PurchaseResponse DTO
+```
 
 - **Commands** – `CreatePurchaseCommand` writes a purchase entry (`CreatePurchaseCommandHandler`).
 - **Queries** – `GetPurchaseQuery` reads and converts an existing purchase (`GetPurchaseQueryHandler`).
@@ -77,7 +126,7 @@ Query a converted purchase:
 curl "https://purchase-service-development.up.railway.app/purchases/{purchaseId}?currency=Euro"
 ```
 
-## Requirements
+## Local Execution Requirements
 
 - .NET SDK 9.0.306 or later
 - Docker (for optional local database and integration tests)
@@ -96,7 +145,7 @@ Environment variables can override configuration using the `__` separator, e.g.
 export Database__ConnectionString="Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres"
 ```
 
-## Running the API locally
+## Running the API
 
 1. Ensure PostgreSQL is available (run `docker compose up db` or point to an existing instance) and confirm the connection string in `appsettings.Local.json`/environment variables.
 2. Restore dependencies and build:
@@ -170,11 +219,31 @@ Ensure Docker is running before enabling these tests.
 - **Production** – Merging into `main` triggers the deployment to the production Railway environment. The release branch can be deleted once merged.
 - **Hotfixes** – Critical production issues branch from `main` (`hotfix/<issue>`), ship the fix, and merge back into both `main` and `develop` to keep streams aligned.
 
-## CI Pipeline Stages
+## Continuous Integration & Security Testing
 
-- **Analyze** – Runs on every push/PR to `develop` and `main`. Restores dependencies, checks formatting via `dotnet format --verify-no-changes`, and builds with analyzers treating warnings as errors to enforce code style and quality gates.
-- **SAST (CodeQL)** – Executes only on `main` after the analyze stage succeeds. CodeQL inspects the C# solution for security flaws (e.g., injection, unsafe deserialization) and publishes results to the GitHub code-scanning dashboard.
-- **RAST (OWASP Zap)** – Also gated to `main`. Spins up PostgreSQL, launches the API, waits for readiness, and runs OWASP ZAP Baseline against the local endpoint to catch runtime security misconfigurations; always tears down the API afterward.
+Everything runs through `.github/workflows/code-quality.yml`, which orchestrates the code-quality and security checks whenever `develop` or `main` receives new commits.
+
+### Analyze Stage
+
+- Trigger – every push or pull request targeting `develop` or `main`.
+- Tasks – `dotnet restore`, `dotnet format --verify-no-changes --no-restore`, and `dotnet build --configuration Release -warnaserror --no-restore`. This keeps style, analyzers, and baseline build health enforced before any security scans execute.
+- Outcome – upstream stages must pass before the security tooling (CodeQL, ZAP) is allowed to run.
+
+### Static Application Security Testing (SAST)
+
+- Trigger – runs on `main` once the analyze stage succeeds.
+- Tooling – [GitHub CodeQL](https://github.com/github/codeql) inspects the C# projects for common CWE patterns (SQL injection, path traversal, unsafe deserialization).
+- Results – alerts appear under “Security > Code scanning alerts”, each with file/line references and data-flow traces for easier remediation.
+- Local reproduction – install the [CodeQL CLI](https://codeql.github.com/docs/codeql-cli/) and mimic the workflow (`codeql database create`, `codeql database analyze`) when verifying fixes before pushing.
+
+### Runtime Application Security Testing (RAST)
+
+- Trigger – executes on `main` after analyze completes.
+- Tooling – [OWASP ZAP Baseline](https://www.zaproxy.org/docs/docker/baseline-scan/) runs against a locally hosted API.
+- Environment – the job provisions PostgreSQL, boots the API via `dotnet run` bound to `http://0.0.0.0:8080`, waits for `/openapi/v1.json` or `/swagger/index.html`, and performs passive scans.
+- Compliance – ZAP findings about cacheable responses are mitigated through the middleware in `src/PurchaseService.Api/Program.cs` that forces `Cache-Control: no-store`. `Sec-Fetch-Dest` warnings stem from scanner client behavior and are tracked as informational.
+- Artifacts – the workflow uploads a `zap-scan` bundle with the HTML report (`Actions > Code Quality > Artifacts`).
+- Local reproduction – run the API locally and execute `docker run --rm --network host -v $(pwd):/zap/wrk:o zaproxy/zap-baseline -t http://127.0.0.1:8080 -r zap-report.html` to iterate on fixes without waiting for CI.
 
 ## Deploying to Railway
 
