@@ -126,7 +126,7 @@ Query a converted purchase:
 curl "https://purchase-service-development.up.railway.app/purchases/{purchaseId}?currency=Euro"
 ```
 
-## Requirements
+## Local Execution Requirements
 
 - .NET SDK 9.0.306 or later
 - Docker (for optional local database and integration tests)
@@ -145,7 +145,7 @@ Environment variables can override configuration using the `__` separator, e.g.
 export Database__ConnectionString="Host=localhost;Port=5432;Database=purchases;Username=postgres;Password=postgres"
 ```
 
-## Running the API locally
+## Running the API
 
 1. Ensure PostgreSQL is available (run `docker compose up db` or point to an existing instance) and confirm the connection string in `appsettings.Local.json`/environment variables.
 2. Restore dependencies and build:
